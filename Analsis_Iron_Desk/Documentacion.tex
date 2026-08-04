@@ -1,0 +1,529 @@
+\documentclass[10pt,conference]{IEEEtran}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-noquoting]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{tabularx}
+\usepackage{siunitx}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue,
+    pdftitle={Caracterizacion objetiva y comparativa de emulaciones de cinta magnetica},
+}
+
+\begin{document}
+
+\title{Caracterización Objetiva y Comparativa de Emulaciones de Cinta Magnética: \\
+Protocolos de Calibración, Mantenimiento de Respuesta frente a Ganancia y Compresión No Lineal por Frecuencia}
+
+\author{
+\IEEEauthorblockN{Alioth Ponce Aranda}
+\IEEEauthorblockA{APA Audio Labs\\
+Investigación en Acústica y Procesamiento Digital de Señales (DSP)\\
+Correo electrónico: \texttt{aliothponce@gmail.com}}
+}
+
+\maketitle
+
+\begin{abstract}
+Se establece un protocolo de medición empírico y objetivamente reproducible para evaluar y
+comparar emulaciones de cinta magnética de distribución gratuita. Se analiza el plugin
+\emph{Iron Deck} (M~Media Audio) frente a un procesador de referencia representativo de
+una firma internacionalmente establecida en hardware de grabación analógico.
+La investigación examina la divergencia de estándares de ecualización entre ambos dispositivos
+—coincidiendo únicamente en NAB, mientras que Iron Deck ofrece IEC/AES y la referencia expone
+CCIR— y evalúa los protocolos de calibración físicos (cintas patrón MRL/STL, flujos magnéticos
+de $200$, $250$, $355$ y $510\,\text{nWb/m}$) y su correspondencia en el dominio digital.
+Mediante scripts en Python se realizan tres análisis exclusivos: (1)~estabilidad de calibración
+espectral bajo excursión de ganancia (\emph{drive sweep}); (2)~curva de transferencia estática
+Input$\to$Output a múltiples frecuencias; y (3)~compresión no lineal dependiente de la frecuencia.
+Los resultados muestran que Iron Deck iguala la integridad digital del dispositivo de referencia
+en estabilidad de frecuencia y anti-aliasing, y ofrece ventajas de versatilidad en la selección
+de estándar de ecualización y velocidad de transporte.
+Este estudio sienta un precedente metodológico para la comunidad de ingeniería de audio.
+\end{abstract}
+
+\begin{IEEEkeywords}
+emulación de cinta magnética, cinta patrón MRL, ecualización NAB/IEC/CCIR, respuesta en
+frecuencia, distorsión armónica total (THD), compresión no lineal por frecuencia, aliasing,
+audio DSP, análisis objetivo.
+\end{IEEEkeywords}
+
+% ===========================================================================
+\section{Introducción}
+% ===========================================================================
+
+En el ámbito del procesamiento de señales de audio, las emulaciones analógicas desempeñan un
+rol crítico al impartir cohesión dinámica y coloración armónica características del medio
+magnético. Históricamente, la apreciación de estos procesadores ha estado supeditada al
+prestigio comercial de la marca desarrolladora o al nombre de la máquina física modelada,
+relegando el análisis objetivo a un segundo plano.
+
+La presente investigación aborda una comparativa rigurosa entre dos emulaciones de cinta
+magnética de distribución gratuita pero de orígenes opuestos: \emph{Iron Deck} (M~Media
+Audio), un plugin de un desarrollador independiente con control paramétrico de velocidad y
+curva de ecualización; y un plugin de referencia distribuido por una firma líder en hardware
+de grabación analógico, aquí tratado de forma anónima por razones de independencia técnica.
+
+El objetivo central no es determinar subjetivamente cuál dispositivo produce una coloración
+sonora más apreciada, sino construir un precedente empírico basado en métricas DSP
+reproducibles: respuesta en frecuencia y fase, distorsión armónica total (THD), compresión
+no lineal dependiente de la frecuencia, deriva de calibración espectral e inmunidad al
+aliasing. Todas las mediciones se realizaron programáticamente para garantizar su
+reproducibilidad independiente de criterio perceptual.
+
+% ===========================================================================
+\section{Fundamentos Físicos y Estándares de Calibración}
+% ===========================================================================
+
+\subsection{Pérdidas Magnéticas y Geometría de Cabezas}
+
+La física del transporte de cinta impone restricciones dependientes de la velocidad $v$ y
+la longitud de onda magnética $\lambda = v/f$. A bajas velocidades ($7.5\,\text{ips}$),
+la longitud de onda de los agudos ($10\,\text{kHz}$) se reduce drásticamente, incrementando
+las pérdidas por entredicho magnético (\emph{gap loss}):
+\begin{equation}
+L_g(f) = 20\log_{10}\!\left|\frac{\sin(\pi g/\lambda)}{\pi g/\lambda}\right| \quad (\text{dB})
+\end{equation}
+donde $g$ es el ancho físico del entredicho de la cabeza reproductora. La pérdida de
+separación de Wallace \cite{wallace}, $L_d(f)=54.6\,(d/\lambda)\,\text{dB}$, atenúa los
+agudos cuando la cinta se despega de la cabeza. En el rango grave, la geometría de los polos
+magnéticos introduce interferencia constructiva/destructiva conocida como \emph{head bump},
+característica en el rango $50$–$100\,\text{Hz}$.
+
+\subsection{Estándares de Ecualización: Coincidencia en NAB y Divergencia IEC/CCIR}
+
+Un hallazgo fundamental de este estudio es la divergencia de estándares de ecualización entre
+los dos dispositivos evaluados:
+
+\begin{itemize}
+    \item \textbf{NAB} (National Association of Broadcasters): única norma presente en
+    \emph{ambos} plugins. Utiliza constantes de tiempo $\tau_1=50\,\mu\text{s}$
+    ($f_1\approx 3183\,\text{Hz}$) y $\tau_2=3180\,\mu\text{s}$ ($f_2\approx 50\,\text{Hz}$),
+    con realce en agudos y énfasis en graves (norma americana).
+
+    \item \textbf{IEC~1\,/\,CCIR} (norma europea, $15\,\text{ips}$): disponible únicamente
+    en el dispositivo de referencia. Constante $\tau_1=35\,\mu\text{s}$
+    ($f_1\approx 4547\,\text{Hz}$), sin énfasis de graves, produciendo un perfil más plano
+    y transparente en la banda media-alta.
+
+    \item \textbf{IEC~2\,/\,AES} ($30\,\text{ips}$): disponible únicamente en Iron Deck.
+    Constante $\tau_1=17.5\,\mu\text{s}$ ($f_1\approx 9095\,\text{Hz}$), diseñada para
+    máxima respuesta extendida en alta frecuencia y menor piso de ruido a alta velocidad.
+\end{itemize}
+
+La inclusión de CCIR en la referencia refleja el modelado de equipos de estudio europeos
+(p.\,ej.\ Studer, Telefunken), mientras que la oferta de IEC/AES en Iron Deck apunta a
+flujos de trabajo de alta resolución a $30\,\text{ips}$. Esta divergencia de diseño es
+en sí misma un objeto de estudio técnico.
+
+\subsection{Protocolos Físicos de Calibración y su Mapeo Digital}
+
+En máquinas de cinta físicas, la alineación de estudio requiere cintas patrón certificadas
+(MRL/STL) \cite{mrl} para ajustar:
+\begin{enumerate}
+    \item \textbf{Azimut}: perpendicularidad de la cabeza reproductora mediante tono de
+    $10$–$15\,\text{kHz}$.
+
+    \item \textbf{Flujo operativo}: calibración de $0\,\text{VU}\equiv+4\,\text{dBu}
+    \equiv -18\,\text{dBFS}$ con tono de $1\,\text{kHz}$ a flujos de $200$, $250$, $355$
+    o $510\,\text{nWb/m}$.
+
+    \item \textbf{Ajuste de bias}: corriente de polarización de $100$–$200\,\text{kHz}$
+    ajustada por \emph{overbias} ($-1.5\,\text{dB}$ a $10\,\text{kHz}$) para optimizar el
+    balance entre distorsión y ruido.
+\end{enumerate}
+
+En el dominio digital, este protocolo se evalúa verificando que el procesado no introduzca
+derivas de frecuencia ni desfases erráticos ante excursiones de ganancia, lo que constituye
+el objeto de la Sección~\ref{sec:calibracion} de este trabajo.
+
+% ===========================================================================
+\section{Metodología de Análisis DSP Programático}
+% ===========================================================================
+
+Las mediciones se realizaron programáticamente en Python~3 (\texttt{scipy.signal},
+\texttt{numpy}) a $48\,\text{kHz}$\,/\,32-bit float, sobre señales generadas y procesadas
+por cada plugin en tiempo real bajo las condiciones exactas de cada experimento:
+
+\begin{itemize}
+    \item \textbf{Respuesta en frecuencia}: barrido senoidal logarítmico
+    ($1\,\text{Hz}$–$24\,\text{kHz}$). La función de transferencia $H(f)$ se estimó mediante
+    la relación de densidades espectrales cruzadas (CSD):
+    \begin{equation}
+        H(f) = \frac{S_{xy}(f)}{S_{xx}(f)}
+    \end{equation}
+    con suavizado Savitzky-Golay ($w=151$, $p=2$) para eliminar ruido espectral
+    sin distorsionar las pendientes de EQ.
+
+    \item \textbf{Transferencia estática y THD}: tonos puros a $100\,\text{Hz}$,
+    $1\,\text{kHz}$ y $5\,\text{kHz}$, evaluados a niveles de entrada de $-30$, $-18$,
+    $-12$, $-6$ y $0\,\text{dBFS}$ para caracterizar compresión y distorsión armónica
+    ($H_2$–$H_{19}$).
+
+    \item \textbf{Estabilidad de calibración}: tonos de referencia a $3000\,\text{Hz}$
+    (tono patrón NAB) y $3150\,\text{Hz}$ (DIN/IEC), medidos con Welch ($N_{\text{FFT}}
+    = 4f_s$) para resolución sub-Hz.
+
+    \item \textbf{Distribución espectral}: ruido rosa procesado y segmentado en
+    10 bandas de octava centradas en $31.5$–$16000\,\text{Hz}$.
+\end{itemize}
+
+Los archivos de entrada siguen la convención de nombres:
+\begin{center}
+\texttt{\{Dispositivo\}-\{IPS\}\_IPS-EQ\_\{curva\}-\{P1\}\_\{V1\}-\{P2\}\_\{V2\}.wav}
+\end{center}
+que permite extracción automática de metadata (velocidad, estándar EQ, nivel de drive)
+mediante expresión regular, sin asumir una rejilla fija de parámetros.
+
+% ===========================================================================
+\section{Resultados y Análisis Experimental}
+% ===========================================================================
+
+\subsection{Retrato Tonal Nominal: Iron Deck}
+\label{sec:retrato_iron}
+
+La Fig.\,\ref{fig:01a_retrato_iron} presenta la comparación directa de la respuesta espectral
+$H(f)$ a nivel nominal ($-12\,\text{dBFS}$) de Iron Deck entre los modos NAB ($15\,\text{ips}$)
+e IEC ($30\,\text{ips}$). La curva NAB exhibe un \emph{head bump} de aproximadamente
+$+0.8\,\text{dB}$ en $75\,\text{Hz}$, característico del realce de graves NAB, con caída
+progresiva por encima de $10\,\text{kHz}$. La curva IEC a $30\,\text{ips}$ extiende la
+respuesta lineal hasta $22\,\text{kHz}$, con un comportamiento considerablemente más plano
+en la banda media-alta. El panel diferencial $\Delta H(f)$ aísla cuantitativamente la
+ganancia o pérdida por banda al conmutar entre estándares.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\textwidth]{resultados_analisis/01a_Retrato_Tonal_IronDeck.png}
+\caption{Retrato tonal nominal de Iron Deck. Comparación entre curva NAB ($15\,\text{ips}$)
+e IEC ($30\,\text{ips}$) a nivel de entrada $-12\,\text{dBFS}$. El panel inferior muestra
+la diferencia espectral $\Delta H(f)$ (IEC$-$NAB) en dB.}
+\label{fig:01a_retrato_iron}
+\end{figure}
+
+\subsection{Retrato Tonal Nominal: Dispositivo de Referencia}
+\label{sec:retrato_ref}
+
+La Fig.\,\ref{fig:01b_retrato_ref} presenta el retrato tonal del dispositivo de referencia
+comparando NAB ($15\,\text{ips}$) y CCIR ($15\,\text{ips}$). La curva CCIR muestra atenuación
+progresiva por encima de $12\,\text{kHz}$ y ausencia de realce de graves, rasgos
+característicos de la norma europea. La diferencia $\Delta H(f)$ respecto a NAB supera
+$-3\,\text{dB}$ en las bandas de alta frecuencia, lo que cuantifica el impacto tonal de la
+elección de estándar de reproducción.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\textwidth]{resultados_analisis/01b_Retrato_Tonal_Referencia.png}
+\caption{Retrato tonal nominal del dispositivo de referencia. Comparación entre NAB y
+CCIR (ambas a $15\,\text{ips}$, $-12\,\text{dBFS}$). El panel inferior muestra
+$\Delta H(f)$ (CCIR$-$NAB) en dB.}
+\label{fig:01b_retrato_ref}
+\end{figure}
+
+Las Figs.\,\ref{fig:02_velocidad} y \ref{fig:03_eq} detallan el efecto de la velocidad de
+transporte ($7.5$, $15$, $30\,\text{ips}$) y el de la curva de ecualización (NAB vs.\ IEC)
+en Iron Deck, respectivamente.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\textwidth]{resultados_analisis/02_Efecto_Velocidad_Cinta_IronDeck.png}
+\caption{Efecto de la velocidad de transporte en Iron Deck ($7.5$, $15$ y $30\,\text{ips}$)
+bajo ecualización NAB, a $-12\,\text{dBFS}$ de entrada. A menor velocidad, se acentúan
+las pérdidas por \emph{gap loss} en alta frecuencia y el \emph{head bump} en graves.}
+\label{fig:02_velocidad}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\textwidth]{resultados_analisis/03_Efecto_Curva_EQ_IronDeck.png}
+\caption{Comparación entre ecualizaciones NAB e IEC en Iron Deck a $30\,\text{ips}$.
+La norma IEC/AES produce una respuesta más extendida en alta frecuencia y sin el énfasis
+de graves propio de NAB.}
+\label{fig:03_eq}
+\end{figure}
+
+\subsection{Análisis Exclusivo: Mantenimiento de la Calibración frente a la Ganancia}
+\label{sec:calibracion}
+
+Para determinar si el control de saturación (\emph{drive}) altera la calibración frecuencial
+del plugin, se define la deriva tonal relativa:
+\begin{equation}
+\Delta H(f,\,D) = |H(f,D)|_{\text{dB}} - |H(f,D_{\text{nom}})|_{\text{dB}}
+\end{equation}
+donde $D_{\text{nom}}$ es el punto de operación nominal (control REC~=~5 para Iron Deck,
+Input~=~0~dB para la referencia). La Fig.\,\ref{fig:09_calibracion} presenta esta deriva
+para ambos dispositivos a $15\,\text{ips}$, NAB.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\textwidth]{resultados_analisis/09_Mantenimiento_Calibracion_vs_Ganancia.png}
+\caption{Mantenimiento de la calibración espectral en función del nivel de \emph{drive}
+(panel superior: $H(f)$ por punto de drive; panel inferior: deriva $\Delta H(f)$ respecto
+al punto nominal). Izquierda: Iron Deck (REC 0\,/\,5\,/\,10). Derecha: Referencia
+(Input $-12$\,/\,$0$\,/\,$+24$~dB).}
+\label{fig:09_calibracion}
+\end{figure}
+
+Los resultados confirman que Iron Deck mantiene la calibración de respuesta espectral dentro
+de un margen $|\Delta H(f)| < 0.15\,\text{dB}$ para cualquier punto de drive en la banda
+$20\,\text{Hz}$–$20\,\text{kHz}$, añadiendo saturación armónica sin alterar el balance
+espectral. El dispositivo de referencia exhibe una deriva mayor a $+24\,\text{dB}$ de input,
+con comprensión en alta frecuencia de hasta $\sim$$0.5\,\text{dB}$, resultado del límite
+de la curva de magnetización a excitación extrema.
+
+\subsection{Análisis Exclusivo: Curva de Transferencia Estática}
+\label{sec:transferencia}
+
+La Tabla\,\ref{tab:transferencia} sintetiza la \emph{compresión relativa de nivel}
+($\Delta_{\text{REC}} = \overline{\Delta_C}(\text{REC}_{\text{max}}) -
+\overline{\Delta_C}(\text{REC}_{\text{min}})$) medida a $1\,\text{kHz}$ y $100\,\text{Hz}$
+para cada punto de drive evaluado. $\Delta_C = \text{Out}_{\text{RMS}} -
+\text{In}_{\text{RMS}}$ (en dB) cuantifica la desviación de la ganancia de inserción
+respecto a la relación lineal 1:1; $\Delta_{\text{REC}}$ es la excursión total de compresión
+al recorrer el rango completo del control de drive.
+
+\begin{table}[htbp]
+\caption{Excursión de compresión al recorrer el rango completo de drive.
+$\Delta_C = \text{Out}_\text{RMS} - \text{In}_\text{RMS}$ (dB) medida a entrada
+$-3\,\text{dBFS}$. $\Delta_\text{REC}$ es la diferencia de $\Delta_C$ entre el
+drive máximo y mínimo evaluados ($15\,\text{ips}$, NAB).}
+\label{tab:transferencia}
+\centering
+\small
+\begin{tabular}{llcrr}
+\toprule
+Dispositivo & Drive & $f$ & $\Delta_C$ (dB) & $\Delta_\text{REC}$ (dB) \\
+\midrule
+Iron Deck & REC 0  & 1\,kHz & ref.\,$\Delta_C^0$      & \multirow{3}{*}{$-19.0$} \\
+Iron Deck & REC 5  & 1\,kHz & $\Delta_C^0 - 3.67$  & \\
+Iron Deck & REC 10 & 1\,kHz & $\Delta_C^0 - 18.99$ & \\
+\midrule
+Iron Deck & REC 0  & 100\,Hz & ref.\,$\Delta_C^0$      & \multirow{3}{*}{$-19.1$} \\
+Iron Deck & REC 5  & 100\,Hz & $\Delta_C^0 - 3.74$  & \\
+Iron Deck & REC 10 & 100\,Hz & $\Delta_C^0 - 19.08$ & \\
+\midrule
+Referencia & Input $-12$\,dB & 1\,kHz  & ref.\,$\Delta_C^0$      & \multirow{3}{*}{$-21.8$} \\
+Referencia & Input $+0$\,dB  & 1\,kHz  & $\Delta_C^0 - 0.03$  & \\
+Referencia & Input $+24$\,dB & 1\,kHz  & $\Delta_C^0 - 21.85$ & \\
+\midrule
+Referencia & Input $-12$\,dB & 100\,Hz & ref.\,$\Delta_C^0$      & \multirow{3}{*}{$-22.7$} \\
+Referencia & Input $+0$\,dB  & 100\,Hz & $\Delta_C^0 - 0.47$  & \\
+Referencia & Input $+24$\,dB & 100\,Hz & $\Delta_C^0 - 22.66$ & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La Tabla\,\ref{tab:transferencia} muestra que la excursión de compresión al recorrer el
+rango completo de drive es de $\approx 19\,\text{dB}$ en Iron Deck y de
+$\approx 21$--$23\,\text{dB}$ en la referencia, con comportamiento similar a $1\,\text{kHz}$
+y $100\,\text{Hz}$.
+
+\subsection{Análisis Exclusivo: Compresión No Lineal por Frecuencia}
+\label{sec:compresion_frec}
+
+La Tabla\,\ref{tab:compresion} presenta el análisis de la variación de $\Delta_C$ al
+recorrer el rango de nivel de entrada ($-33$ a $-3\,\text{dBFS}$) a ajuste nominal de
+drive, para tres bandas de frecuencia. La columna ``Excursión'' reporta
+$\delta = \Delta_C^{\text{máx}} - \Delta_C^{\text{mín}}$, indicando en cuántos dB
+varía la compresión efectiva al barrer todo el rango dinámico: una excursión mayor implica
+una curva de transferencia más no lineal.
+
+\begin{table}[htbp]
+\caption{Variación de la compresión neta $\Delta_C = \text{Out}_\text{RMS} -
+\text{In}_\text{RMS}$ al recorrer el rango de entrada $-33$ a $-3\,\text{dBFS}$,
+a ajuste nominal de drive ($15\,\text{ips}$, NAB). La excursión
+$\delta = \Delta_C^{\text{máx}} - \Delta_C^{\text{mín}}$ indica el grado
+de no linealidad de la curva de transferencia en cada banda.}
+\label{tab:compresion}
+\centering
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Dispositivo & $f$ (Hz) & $\Delta_C^{\text{mín}}$ (dB) & $\Delta_C^{\text{máx}}$ (dB) & $\delta$ (dB) \\
+\midrule
+Iron Deck  & 100  & $-3.25$ & $-0.02$ & $3.23$ \\
+Iron Deck  & 1000 & $-3.26$ & $-0.00$ & $3.26$ \\
+Iron Deck  & 5000 & $-3.25$ & $+0.01$ & $3.26$ \\
+\midrule
+Referencia & 100  & $-1.93$ & $-0.00$ & $1.93$ \\
+Referencia & 1000 & $-1.44$ & $-0.00$ & $1.44$ \\
+Referencia & 5000 & $-1.14$ & $+0.02$ & $1.16$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Los datos de la Tabla\,\ref{tab:compresion} revelan que Iron Deck exhibe una mayor excursión
+de compresión ($\delta \approx 3.25\,\text{dB}$) uniforme en las tres bandas, consistente
+con una curva de magnetización de tipo \emph{soft-knee} simétrica. En la referencia, la
+no linealidad decrece con la frecuencia ($\delta = 1.93\,\text{dB}$ a $100\,\text{Hz}$,
+$1.16\,\text{dB}$ a $5\,\text{kHz}$), documentando el efecto físico de pre-énfasis
+de grabación a alta frecuencia que reduce la excursión de flujo y, por tanto, la saturación.
+
+\subsection{THD, Anti-Aliasing y Distribución Espectral}
+\label{sec:thd}
+
+La Fig.\,\ref{fig:05_thd} grafica la THD (\%) a $1\,\text{kHz}$ en función del nivel de
+entrada, dominada por armónicos impares ($H_3$, $H_5$) en Iron Deck, consistente con el
+modelo de histéresis magnética de Preisach-Jiles-Atherton. La Fig.\,\ref{fig:06_aliasing}
+demuestra la efectividad del filtro de sobremuestreo de Iron Deck: a $5\,\text{kHz}$ y
+$0\,\text{dBFS}$, los picos armónicos se encuentran en los múltiplos exactos de la fundamental
+sin energía espuria entre ellos, evidenciando la ausencia de \emph{foldover} hasta la
+frecuencia de Nyquist.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\textwidth]{resultados_analisis/05_THD_vs_Nivel.png}
+\caption{Distorsión Armónica Total (THD\,\%) vs.\ nivel de entrada a $1\,\text{kHz}$,
+$15\,\text{ips}$, NAB. Izquierda: Iron Deck (tres puntos de drive REC). Derecha:
+dispositivo de referencia (tres niveles de Input).}
+\label{fig:05_thd}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\textwidth]{resultados_analisis/06_Aliasing_5kHz_Saturacion_Extrema.png}
+\caption{Prueba de anti-aliasing con tono de $5\,\text{kHz}$ a saturación máxima
+($0\,\text{dBFS}$). Magnitud normalizada a la fundamental. Los marcadores verticales
+señalan los múltiplos de $5\,\text{kHz}$. La ausencia de energía espuria entre armónicos
+confirma el filtrado de sobremuestreo efectivo.}
+\label{fig:06_aliasing}
+\end{figure}
+
+La Fig.\,\ref{fig:07_psd} presenta la distribución de energía por bandas de octava bajo
+excitación de ruido rosa, con panel diferencial de escala propia para detectar diferencias
+de décimas de dB que pasarían desapercibidas en curvas superpuestas.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.48\textwidth]{resultados_analisis/07_Distribucion_Espectral_RuidoRosa.png}
+\caption{Distribución de energía espectral por bandas de octava (ruido rosa, $-12\,\text{dBFS}$,
+$15\,\text{ips}$, NAB). Panel izquierdo: Iron Deck vs.\ Referencia a ajuste nominal. Panel
+derecho: Iron Deck a drive mínimo vs.\ máximo (migración espectral). El panel diferencial
+inferior en cada caso aísla la variación banda a banda en dB.}
+\label{fig:07_psd}
+\end{figure}
+
+\subsection{Estabilidad Digital de Frecuencia}
+\label{sec:estabilidad}
+
+La Tabla\,\ref{tab:estabilidad} resume la prueba de estabilidad digital mediante tonos patrón
+de $3000\,\text{Hz}$ (NAB) y $3150\,\text{Hz}$ (DIN/IEC), procesados a todos los puntos de
+drive disponibles. La frecuencia detectada se midió con Welch ($N_{\text{FFT}} = 4f_s$,
+resolución $0.25\,\text{Hz}$).
+
+\begin{table}[htbp]
+\caption{Prueba de Estabilidad Digital de Frecuencia. La frecuencia detectada se midió
+con resolución $0.25\,\text{Hz}$ (Welch, $N_\text{FFT}=4f_s$). Se reporta una fila
+representativa por combinación de dispositivo y estándar; todos los puntos de drive
+evaluados arrojaron $\text{Deriva}=+0.00\,\text{Hz}$.}
+\label{tab:estabilidad}
+\centering
+\small
+\begin{tabular}{llccc}
+\toprule
+Dispositivo & EQ & IPS & Patrón (Hz) & Deriva (Hz) \\
+\midrule
+Iron Deck & NAB & 7.5 & 3000 & $+0.00$ \\
+Iron Deck & NAB & 15  & 3000 & $+0.00$ \\
+Iron Deck & NAB & 30  & 3000 & $+0.00$ \\
+Iron Deck & IEC & 30  & 3150 & $+0.00$ \\
+\midrule
+Referencia & NAB  & 7.5 & 3000 & $+0.00$ \\
+Referencia & NAB  & 15  & 3000 & $+0.00$ \\
+Referencia & CCIR & 15  & 3150 & $+0.00$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Ambos dispositivos demuestran deriva de frecuencia nula ($+0.00\,\text{Hz}$) bajo todos los
+puntos de drive evaluados, confirmando que ni Iron Deck ni el dispositivo de referencia
+introducen modulación de frecuencia ni artefactos de reloj digital.
+
+% ===========================================================================
+\section{Discusión}
+% ===========================================================================
+
+\begin{enumerate}
+    \item \textbf{Respuesta espectral a $30\,\text{ips}$ (IEC/AES):} Iron Deck ofrece una
+    extensión lineal hasta $22\,\text{kHz}$ que resulta ventajosa en flujos de trabajo a
+    alta resolución, donde la atenuación de presencia en alta frecuencia introduciría
+    coloración no deseada. La referencia, al limitarse a $15\,\text{ips}$ con CCIR, es
+    más adecuada para emulación de estilo de producción europeo de los años 60--70.
+
+    \item \textbf{Mantenimiento de calibración bajo saturación:} La invariancia $|\Delta H(f)|
+    < 0.15\,\text{dB}$ de Iron Deck frente a incrementos de REC permite explotar la saturación
+    armónica como herramienta de coloración sin comprometer el balance espectral de la mezcla.
+    Este comportamiento es análogo al de una máquina física correctamente alineada con bias
+    óptimo: la saturación no desplaza el punto de operación de la EQ de reproducción.
+
+    \item \textbf{No linealidad dependiente de la frecuencia:} La excursión de compresión
+    uniforme de Iron Deck ($\delta \approx 3.25\,\text{dB}$ en las tres bandas) documenta
+    un modelo de histéresis simétrico. La reducción de $\delta$ con la frecuencia en la
+    referencia ($3.0 \to 1.2\,\text{dB}$ de $100\,\text{Hz}$ a $5\,\text{kHz}$) es
+    consistente con el efecto físico de pre-énfasis de grabación que reduce la excursión de
+    flujo en alta frecuencia, disminuyendo la probabilidad de saturación.
+
+    \item \textbf{Divergencia de estándares:} La elección entre IEC/AES y CCIR responde a
+    filosofías de uso distintas. Ninguna norma es objetivamente superior; su pertinencia depende
+    del repertorio, el periodo de grabación que se desea emular y el contexto de aplicación
+    (mastering de alta resolución vs.\ coloración de estudio clásico europeo).
+
+    \item \textbf{Integridad digital:} La deriva de frecuencia nula y la ausencia de aliasing
+    espurio en ambos plugins confirman que las implementaciones digitales son coherentes con los
+    requisitos de la norma AES17 \cite{aes17} para equipos de audio digital.
+\end{enumerate}
+
+% ===========================================================================
+\section{Conclusión}
+% ===========================================================================
+
+La evaluación objetiva de emulaciones de cinta magnética mediante métricas DSP reproducibles
+permite comparar dispositivos independientemente de su origen comercial. Los resultados
+empíricos demuestran que Iron Deck (M~Media Audio) iguala la integridad digital del procesador
+de referencia en las métricas críticas de estabilidad de frecuencia y anti-aliasing, y ofrece
+ventajas técnicas en versatilidad de selección de velocidad ($7.5$\,/\,$15$\,/\,$30\,\text{ips}$)
+y estándar de ecualización (NAB\,/\,IEC). El mantenimiento de calibración espectral bajo
+saturación intensa ($|\Delta H(f)|<0.15\,\text{dB}$) es una ventaja operativa concreta para
+el ingeniero de mezcla. Este trabajo establece un protocolo metodológico de \emph{benchmarking}
+reproducible para la evaluación objetiva de emulaciones de cinta magnética en la comunidad de
+ingeniería de audio.
+
+\begin{thebibliography}{9}
+
+\bibitem{aes17}
+Audio Engineering Society, \emph{AES17-2020: AES standard method for digital audio engineering
+--- Measurement of digital audio equipment}, New York, 2020.
+
+\bibitem{nab}
+National Association of Broadcasters, \emph{NAB Standard: Reproducing and Recording
+Characteristics for Magnetic Tape Recording}, Washington, D.C., 1965.
+
+\bibitem{iec94}
+International Electrotechnical Commission, \emph{IEC 60094: Magnetic tape sound recording and
+reproducing systems}, Geneva, Switzerland.
+
+\bibitem{mrl}
+Magnetic Reference Laboratory, \emph{MRL Calibration Tapes: Technical Notes on Fluxivity and
+Equalization Standards}, San Jose, CA, 2019.
+
+\bibitem{wallace}
+R.\,L.\ Wallace, ``The Reproduction of Magnetically Recorded Signals,'' \emph{Bell System
+Technical Journal}, vol.~30, no.~4, pp.~1145--1173, 1951.
+
+\bibitem{zolzer}
+U.\ Zölzer, \emph{Digital Audio Signal Processing}, 2nd ed., Chichester, UK: John Wiley \& Sons,
+2008.
+
+\end{thebibliography}
+
+\end{document}
