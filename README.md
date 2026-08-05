@@ -36,36 +36,12 @@ Analsis_Iron_Desk/
 │
 ├── analisis_cientifico.py        # Pipeline principal de análisis DSP
 ├── generar_senales.py            # Generación de señales de prueba
-├── Documentacion.tex             # Artículo científico en formato IEEE (LaTeX) [ES]
 ├── Documentacion.pdf             # PDF compilado del artículo [ES]
-├── Documentation_EN.tex          # Artículo científico en formato IEEE (LaTeX) [EN]
 ├── Documentation_EN.pdf          # PDF compilado del artículo [EN]
 ├── README.md
-├── .gitignore
-│
-├── Comparativa/                  # Proyecto REAPER con los renders de cada plugin
-│   ├── Comparativa.rpp           # Sesión REAPER
-│   ├── Backups/
-│   └── Media/                    # Archivos WAV procesados por cada plugin (~200 MB c/u)
-│       ├── Iron Deck-*.wav
-│       └── Dispositivo de referencia-*.wav
-│
-├── senales_prueba/               # Señales de referencia y archivo índice
-│   ├── senales_prueba_completas.wav
-│   └── indice_senales.txt
-│
-└── resultados_analisis/          # Gráficas PNG generadas automáticamente
-    ├── 01a_Retrato_Tonal_IronDeck.png
-    ├── 01b_Retrato_Tonal_Referencia.png
-    ├── 02_Efecto_Velocidad_Cinta_IronDeck.png
-    ├── 03_Efecto_Curva_EQ_IronDeck.png
-    ├── 05_THD_vs_Nivel.png
-    ├── 06_Aliasing_5kHz_Saturacion_Extrema.png
-    ├── 07_Distribucion_Espectral_RuidoRosa.png
-    └── 09_Mantenimiento_Calibracion_vs_Ganancia.png
-```
 
-> **Nota:** Los archivos WAV de audio (~200 MB cada uno) están excluidos del seguimiento de Git por su tamaño. Se pueden regenerar con `generar_senales.py` y procesando las señales a través de cada plugin en `Comparativa/Comparativa.rpp`.
+
+```
 
 ---
 
